@@ -41,4 +41,4 @@ jobs:
         with:
           context: ./backend/
           push: true
-          tags: dmitrystepanov24/taski_backend:latest
+          tags: dmitrystepanov24/foodgram_backend:latest

@@ -22,5 +22,5 @@ class Command(BaseCommand):
                 Ingredient.objects.create(
                     name=item['name'],
                     measurement_unit=item['measurement_unit'])
-        self.stdout.write(self.style.SUCCESS('Data successfully loaded'))
-
+        self.stdout.write(
+            self.style.SUCCESS('Data successfully loaded'))

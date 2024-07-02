@@ -56,7 +56,8 @@ def create_pdf(ingredients):
     )
     footer = Paragraph('ООО "Foodgram Corporation" 2024г', footer_style)
 
-    elements = [title, Spacer(1, 12)] + ingredients_list + [Spacer(1, 20), footer]
+    elements = ([title, Spacer(1, 12)]
+                + ingredients_list + [Spacer(1, 20), footer])
 
     doc.build(elements)
     pdf_buffer.seek(0)

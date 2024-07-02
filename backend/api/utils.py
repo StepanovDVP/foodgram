@@ -1,14 +1,15 @@
-from rest_framework.response import Response
-from rest_framework import status
-from django.shortcuts import get_object_or_404
 from django.db import IntegrityError
-from django.db.models import Subquery, OuterRef, Sum, Exists
+from django.db.models import Exists, OuterRef, Sum
+from django.shortcuts import get_object_or_404
+from rest_framework import status
+from rest_framework.response import Response
 
 from recipes.models import Ingredient
 
 
-def handle_action(request, pk, user, obj_class,
-                  model_class, serializer_class, obj_name, update_subscribed=False):
+def handle_action(request, pk, user, obj_class, model_class, serializer_class,
+                  obj_name, update_subscribed=False):
+    """Создать или удалить объект."""
     obj = get_object_or_404(obj_class, pk=pk)
     if request.method == 'POST':
         try:
@@ -31,14 +32,17 @@ def handle_action(request, pk, user, obj_class,
 
 
 def annotate_exists(queryset, user, annotations):
+    """Получить queryset для viewset."""
     for alias, model, field in annotations:
         queryset = queryset.annotate(
-            **{alias: Exists(model.objects.filter(user=user, **{field: OuterRef('pk')}))}
+            **{alias: Exists(
+                model.objects.filter(user=user, **{field: OuterRef('pk')}))}
         )
     return queryset
 
 
 def get_ingredients_in_shopping_cart(user):
+    """Вернуть ингредиенты в корзине пользователя."""
     return (Ingredient.objects
             .filter(recipe__shopping_by__user=user)
             .values('name', 'measurement_unit')

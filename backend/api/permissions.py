@@ -2,9 +2,7 @@ from rest_framework import permissions
 
 
 class IsOwnerOrAdmin(permissions.BasePermission):
-    """
-    Custom permission to only allow owners of an object or admins/superusers to edit it.
-    """
+    """Custom permission."""
 
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:

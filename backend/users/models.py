@@ -5,6 +5,8 @@ from django.db.models import UniqueConstraint
 
 
 class MyUser(AbstractUser):
+    """Модель пользователя."""
+
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
     email = models.EmailField(max_length=254, unique=True)
 
@@ -13,6 +15,8 @@ class MyUser(AbstractUser):
 
 
 class Follow(models.Model):
+    """Модель подписок."""
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         related_name='following',

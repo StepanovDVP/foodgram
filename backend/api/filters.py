@@ -1,8 +1,11 @@
 from django_filters import rest_framework as filters
+
 from recipes.models import Recipe
 
 
 class RecipeFilter(filters.FilterSet):
+    """Фильтрация модели Рецепт."""
+
     is_favorited = filters.BooleanFilter(method='filter_fields')
     is_in_shopping_cart = filters.BooleanFilter(method='filter_fields')
     author = filters.CharFilter(field_name='author__id')

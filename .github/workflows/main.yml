@@ -82,3 +82,75 @@ jobs:
           context: ./gateway/
           push: true
           tags: dmitrystepanov24/foodgram_gateway:latest
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs:
+      - build_and_push_to_docker_hub
+      - build_frontend_and_push_to_docker_hub
+      - build_gateway_and_push_to_docker_hub
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+      - name: Copy docker-compose.yml via ssh
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          source: "docker-compose.production.yml"
+          target: "foodgram"
+      - name: Executing remote ssh commands to deploy
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          script: |
+            cd foodgram
+
+            # Проверка на первый деплой
+            if [ ! -f .first_deploy_done ]; then
+              echo "Первый деплой, выполнение всех команд"
+              sudo docker compose -f docker-compose.production.yml pull
+              sudo docker compose -f docker-compose.production.yml down
+              sudo docker compose -f docker-compose.production.yml up -d
+
+              sudo docker compose -f docker-compose.production.yml exec backend python manage.py makemigrations --no-input
+              sudo docker compose -f docker-compose.production.yml exec backend python manage.py migrate --no-input
+
+              sudo docker compose -f docker-compose.production.yml exec backend python manage.py import_ingredients /data/ingredients.json
+              sudo docker compose -f docker-compose.production.yml exec backend python manage.py collectstatic --no-input
+              sudo docker compose -f docker-compose.production.yml exec backend cp -r /app/collected_static/. /backend_static/static/
+
+              # Пометка, что первый деплой завершён
+              touch .first_deploy_done
+            else
+              echo "Повторный деплой, проверка изменений"
+
+              sudo docker compose -f docker-compose.production.yml pull
+              sudo docker compose -f docker-compose.production.yml down
+              sudo docker compose -f docker-compose.production.yml up -d
+
+              # Выполнение миграций только при изменении моделей
+              MIGRATION_FILES_CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -E 'backend/migrations/|backend/models.py')
+              if [ -n "$MIGRATION_FILES_CHANGED" ]; then
+                sudo docker compose -f docker-compose.production.yml exec backend python manage.py makemigrations --no-input
+                sudo docker compose -f docker-compose.production.yml exec backend python manage.py migrate --no-input
+              fi
+
+              # Импорт ингредиентов только если файл изменился
+              INGREDIENTS_FILE_CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -E 'data/ingredients.json')
+              if [ -n "$INGREDIENTS_FILE_CHANGED" ]; then
+                sudo docker compose -f docker-compose.production.yml exec backend python manage.py import_ingredients /data/ingredients.json
+              fi
+
+              # Сборка статики только если есть изменения в статических файлах
+              STATIC_FILES_CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -E 'backend/static/')
+              if [ -n "$STATIC_FILES_CHANGED" ]; then
+                sudo docker compose -f docker-compose.production.yml exec backend python manage.py collectstatic --no-input
+                sudo docker compose -f docker-compose.production.yml exec backend cp -r /app/collected_static/. /backend_static/static/
+              fi
+            fi

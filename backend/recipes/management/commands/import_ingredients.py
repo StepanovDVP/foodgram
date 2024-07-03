@@ -18,7 +18,7 @@ class Command(BaseCommand):
         with open(file_path, 'r', encoding='utf-8') as file:
             data = json.load(file)
             for item in data:
-                Ingredient.objects.create(
+                Ingredient.objects.get_or_create(
                     name=item['name'],
                     measurement_unit=item['measurement_unit'])
         self.stdout.write(

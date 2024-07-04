@@ -4,12 +4,13 @@ from django.db.models import BooleanField, Value
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
+from djoser.views import UserViewSet as BaseUserViewSet
 from rest_framework import filters, permissions, status, viewsets
-from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
+
+from recipes.models import Favorite, Ingredient, Recipe, ShoppingCart, Tag
 from users.models import Follow
 
 from .filters import RecipeFilter
@@ -26,7 +27,8 @@ from .viewsets import CustomViewSet
 User = get_user_model()
 
 
-class UserViewSet(viewsets.ModelViewSet):
+# class UserViewSet(viewsets.ModelViewSet):
+class UserViewSet(BaseUserViewSet):
     """Создание и редактирвоание пользовательских действий."""
 
     serializer_class = UserSerializer
@@ -35,13 +37,15 @@ class UserViewSet(viewsets.ModelViewSet):
     pagination_class = LimitOffsetPagination
 
     def get_permissions(self):
-        if self.action in ['create', 'list', 'retrieve', 'login']:
-            self.permission_classes = [permissions.AllowAny]
+        if self.action in ['list', 'retrieve']:
+            return [permissions.AllowAny()]
         return super().get_permissions()
 
     def get_serializer_class(self):
         if self.action == 'create':
             return UserCreateSerializer
+        elif self.action == 'set_password':
+            return ChangePasswordSerializer
         return UserSerializer
 
     def get_queryset(self):
@@ -54,38 +58,9 @@ class UserViewSet(viewsets.ModelViewSet):
             queryset = annotate_exists(queryset, user, annotations)
         return queryset
 
-    @action(methods=['get'], detail=False, url_path='me')
-    def get_yourself(self, request):
-        """Получить текущего пользователя."""
-        user = self.request.user
-        serializer = UserSerializer(user, context={'request': request})
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-    @action(detail=False, methods=['post'])
-    def login(self, request):
-        """Получить токен для пользователя."""
-        email = request.data.get('email')
-        password = request.data.get('password')
-
-        try:
-            user = User.objects.get(email=email)
-            if not user.check_password(password):
-                return Response(status=status.HTTP_400_BAD_REQUEST)
-        except User.DoesNotExist:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
-
-        token, created = Token.objects.get_or_create(user=user)
-        return Response({'auth_token': token.key})
-
-    @action(detail=False, methods=['post'])
-    def logout(self, request):
-        """Удалить токен пользователя."""
-        try:
-            token = Token.objects.get(user=request.user.id)
-            token.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        except Token.DoesNotExist:
-            return Response(status=status.HTTP_401_UNAUTHORIZED)
+    @action(methods=['get'], detail=False)
+    def me(self, request, *args, **kwargs):
+        return super(UserViewSet, self).me(request, *args, **kwargs)
 
     @action(detail=False, methods=['put', 'delete'],
             url_path='me/avatar')
@@ -104,26 +79,13 @@ class UserViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(detail=False, methods=['post'])
-    def set_password(self, request):
-        """Изменить пароль."""
-        serializer = ChangePasswordSerializer(data=request.data,
-                                              context={'request': request})
-        if serializer.is_valid():
-            new_password = serializer.validated_data['new_password']
-            user = request.user
-            user.set_password(new_password)
-            user.save()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
     @action(detail=False, methods=['get'])
     def subscriptions(self, request):
         """Получить все подписки текущего пользователя."""
-        subscriptions = (User.objects
-                         .filter(follower__user=request.user)
-                         .annotate(is_subscribed=Value(
-                             True, output_field=BooleanField())))
+        subscriptions = (
+            User.objects
+            .filter(follower__user=request.user)
+            .annotate(is_subscribed=Value(True, output_field=BooleanField())))
         page = self.paginate_queryset(subscriptions)
 
         if page is not None:
@@ -135,9 +97,10 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post', 'delete'])
-    def subscribe(self, request, pk=None):
+    def subscribe(self, request, **kwargs):
         """Подписаться на пользователя по id."""
         user = request.user
+        pk = kwargs.get('id')
         return handle_action(request, pk, user, User, Follow, UserSerializer,
                              'following', update_subscribed=True)
 

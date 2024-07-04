@@ -1,9 +1,10 @@
 from django.db import IntegrityError
 from django.db.models import Exists, OuterRef, Sum
 from django.shortcuts import get_object_or_404
-from recipes.models import Ingredient
 from rest_framework import status
 from rest_framework.response import Response
+
+from recipes.models import Ingredient
 
 
 def handle_action(request, pk, user, obj_class, model_class, serializer_class,

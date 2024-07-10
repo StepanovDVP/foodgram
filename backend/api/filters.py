@@ -1,27 +1,26 @@
 from django_filters import rest_framework as filters
-from recipes.models import Recipe
+from recipes.models import Ingredient, Recipe
 
 
 class RecipeFilter(filters.FilterSet):
     """Фильтрация модели Рецепт."""
 
-    is_favorited = filters.BooleanFilter(method='filter_fields')
-    is_in_shopping_cart = filters.BooleanFilter(method='filter_fields')
+    is_favorited = filters.BooleanFilter(field_name='is_favorited')
+    is_in_shopping_cart = filters.BooleanFilter(
+        field_name='is_in_shopping_cart')
     author = filters.CharFilter(field_name='author__id')
-    tags = filters.CharFilter(method='filter_tags')
+    tags = filters.AllValuesMultipleFilter(field_name='tags__slug')
 
     class Meta:
         model = Recipe
         fields = ['is_favorited', 'is_in_shopping_cart', 'author', 'tags']
 
-    def filter_fields(self, queryset, name, value):
-        user = self.request.user
-        if user.is_authenticated:
-            return queryset.filter(**{name: value})
-        return queryset
 
-    def filter_tags(self, queryset, name, value):
-        tags = self.request.query_params.getlist('tags')
-        if tags:
-            queryset = queryset.filter(tags__slug__in=tags).distinct()
-        return queryset
+class IngredientFilter(filters.FilterSet):
+    """Фильтрация модели Ингредиенты."""
+
+    name = filters.CharFilter(field_name='name', lookup_expr='istartswith')
+
+    class Meta:
+        model = Ingredient
+        fields = ['name']

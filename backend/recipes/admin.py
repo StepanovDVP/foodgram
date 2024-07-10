@@ -21,9 +21,6 @@ class RecipeAdmin(admin.ModelAdmin):
     total_favorites.admin_order_field = 'total_favorites'
     total_favorites.short_description = 'Total Favorites'
 
-    def has_add_permission(self, request, obj=None):
-        return False
-
 
 @admin.register(Ingredient)
 class IngredientAdmin(admin.ModelAdmin):

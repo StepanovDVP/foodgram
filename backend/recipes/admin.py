@@ -1,7 +1,13 @@
 from django.contrib import admin
 from django.db.models import Count
 
-from .models import Ingredient, Recipe, Tag
+from .models import Ingredient, Recipe, Tag, RecipeIngredient
+
+
+class RecipeIngredientInline(admin.TabularInline):
+    model = RecipeIngredient
+    extra = 1
+    min_num = 1
 
 
 @admin.register(Recipe)
@@ -9,6 +15,7 @@ class RecipeAdmin(admin.ModelAdmin):
     list_display = ('name', 'author', 'total_favorites')
     search_fields = ['author__username', 'name']
     list_filter = ['tags']
+    inlines = [RecipeIngredientInline]
 
     def get_queryset(self, request):
         queryset = super().get_queryset(request)

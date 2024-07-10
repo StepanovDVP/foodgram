@@ -6,6 +6,7 @@ from .models import Ingredient, Recipe, RecipeIngredient, Tag
 
 class RecipeIngredientInline(admin.TabularInline):
     model = RecipeIngredient
+    autocomplete_fields = ['ingredient']
     extra = 1
     min_num = 1
 

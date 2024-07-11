@@ -1,6 +1,7 @@
 import short_url
 from django.contrib.auth import get_user_model
-from django.db.models import BooleanField, Exists, OuterRef, Sum, Value
+from django.db.models import (BooleanField, Exists, OuterRef, Prefetch, Sum,
+                              Value)
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -19,7 +20,7 @@ from .serializers import (AvatarSerialize, CustomUserSerializer,
                           FavoriteSerializer, FollowSerializer,
                           IngredientSerializer, RecipeCreateSerializer,
                           RecipeReadSerializer, ShoppingCartSerializer,
-                          TagSerializer)
+                          TagSerializer, UserSerializer)
 
 User = get_user_model()
 
@@ -27,7 +28,7 @@ User = get_user_model()
 class UserViewSet(BaseUserViewSet):
     """Создание и редактирвоание пользовательских действий."""
 
-    serializer_class = CustomUserSerializer
+    serializer_class = UserSerializer
     permission_classes = [permissions.AllowAny, ]
 
     pagination_class = LimitOffsetPagination
@@ -85,11 +86,15 @@ class UserViewSet(BaseUserViewSet):
         """Подписаться на пользователя по id."""
         author_id = kwargs.get('id')
         author = get_object_or_404(User, pk=author_id)
+        data = {
+            'following': author.id,
+            'user': request.user.id
+        }
         serializer = FollowSerializer(
-            data={'following': author.id}, context={'request': request}
+            data=data, context={'request': request}
         )
         serializer.is_valid(raise_exception=True)
-        serializer.save(user=request.user)
+        serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @subscribe.mapping.delete
@@ -131,11 +136,13 @@ class UserActionsMixin:
     @staticmethod
     def add_object(request, pk, serializer_class):
         recipe = get_object_or_404(Recipe, pk=pk)
-        serializer = serializer_class(
-            data={'recipe': recipe.id}, context={'request': request}
-        )
+        data = {
+            'recipe': recipe.id,
+            'user': request.user.id
+        }
+        serializer = serializer_class(data=data, context={'request': request})
         serializer.is_valid(raise_exception=True)
-        serializer.save(user=request.user)
+        serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @staticmethod
@@ -170,23 +177,34 @@ class RecipeViewSet(UserActionsMixin, viewsets.ModelViewSet):
 
         if user.is_authenticated:
             annotations = [
-                ('is_favorited', Favorite, 'recipe', 'pk'),
-                ('is_in_shopping_cart', ShoppingCart, 'recipe', 'pk'),
-                # добавил новое поле is_subscribed
-                ('is_subscribed', Follow, 'following', 'author_id')
+                ('is_favorited', Favorite, 'recipe'),
+                ('is_in_shopping_cart', ShoppingCart, 'recipe'),
             ]
-            for alias, model, field, pk in annotations:
+            for alias, model, field in annotations:
                 queryset = queryset.annotate(
                     **{alias: Exists(
                         model.objects.filter(
-                            user=user, **{field: OuterRef(pk)}))}
+                            user=user, **{field: OuterRef('pk')}))}
                 )
+
+            author = Prefetch(
+                'author', queryset=User.objects.annotate(
+                    is_subscribed=Exists(
+                        Follow.objects.filter(
+                            user=user,
+                            following=OuterRef('pk')
+                        )
+                    )
+                )
+            )
+            queryset = queryset.prefetch_related(author)
         else:
             queryset = queryset.annotate(
                 is_favorited=Value(False, output_field=BooleanField()),
                 is_in_shopping_cart=Value(False, output_field=BooleanField()),
                 is_subscribed=Value(False, output_field=BooleanField())
             )
+
         return queryset
 
     @action(detail=True, methods=['get'], url_path='get-link',

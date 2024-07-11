@@ -1,10 +1,11 @@
-from constants import (MAX_LENGTH_INGREDIENT_MEASUREMENT_UNIT,
-                       MAX_LENGTH_INGREDIENT_NAME, MAX_LENGTH_RECIPE_NAME,
-                       MAX_LENGTH_TAG, MAX_TIME_COOKING,
-                       RECIPE_INGREDIENT_AMOUNT)
 from django.contrib.auth import get_user_model
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+
+from constants import (INGREDIENT_AMOUNT_MAX, INGREDIENT_AMOUNT_MIN,
+                       MAX_LENGTH_INGREDIENT_MEASUREMENT_UNIT,
+                       MAX_LENGTH_INGREDIENT_NAME, MAX_LENGTH_RECIPE_NAME,
+                       MAX_LENGTH_TAG, MAX_TIME_COOKING, MIN_TIME_COOKING)
 
 User = get_user_model()
 
@@ -91,8 +92,13 @@ class Recipe(models.Model):
     cooking_time = models.PositiveSmallIntegerField(
         help_text="Время в минутах",
         validators=[
-            MinValueValidator(0),
-            MaxValueValidator(MAX_TIME_COOKING)
+            MinValueValidator(
+                MIN_TIME_COOKING,
+                message='минимально допустимое значение 1'
+            ),
+            MaxValueValidator(
+                MAX_TIME_COOKING,
+                message='максимально допустимое значение 32000'),
         ]
     )
     created_at = models.DateTimeField(auto_now_add=True)
@@ -112,7 +118,15 @@ class RecipeIngredient(models.Model):
     )
     ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
     amount = models.PositiveSmallIntegerField(
-        validators=[MinValueValidator(RECIPE_INGREDIENT_AMOUNT)]
+        validators=[
+            MinValueValidator(
+                INGREDIENT_AMOUNT_MIN,
+                message='минимально допустимое значение 1'
+            ),
+            MaxValueValidator(
+                INGREDIENT_AMOUNT_MAX,
+                message='максимально допустимое значение 32000'),
+        ]
     )
 
     class Meta:

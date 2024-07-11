@@ -1,11 +1,10 @@
-from django.contrib.auth import get_user_model
-from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models
-
 from constants import (INGREDIENT_AMOUNT_MAX, INGREDIENT_AMOUNT_MIN,
                        MAX_LENGTH_INGREDIENT_MEASUREMENT_UNIT,
                        MAX_LENGTH_INGREDIENT_NAME, MAX_LENGTH_RECIPE_NAME,
                        MAX_LENGTH_TAG, MAX_TIME_COOKING, MIN_TIME_COOKING)
+from django.contrib.auth import get_user_model
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
 
 User = get_user_model()
 

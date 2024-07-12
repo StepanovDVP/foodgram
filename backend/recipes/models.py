@@ -93,11 +93,11 @@ class Recipe(models.Model):
         validators=[
             MinValueValidator(
                 MIN_TIME_COOKING,
-                message='минимально допустимое значение 1'
+                message=f'минимально допустимое значение {MIN_TIME_COOKING}'
             ),
             MaxValueValidator(
                 MAX_TIME_COOKING,
-                message='максимально допустимое значение 32000'),
+                message=f'максимально допустимое значение {MAX_TIME_COOKING}'),
         ]
     )
     created_at = models.DateTimeField(auto_now_add=True)
@@ -120,11 +120,11 @@ class RecipeIngredient(models.Model):
         validators=[
             MinValueValidator(
                 INGREDIENT_AMOUNT_MIN,
-                message='минимально допустимое значение 1'
+                message=f'минимально допустимое значение {INGREDIENT_AMOUNT_MIN}'
             ),
             MaxValueValidator(
                 INGREDIENT_AMOUNT_MAX,
-                message='максимально допустимое значение 32000'),
+                message=f'максимально допустимое значение {INGREDIENT_AMOUNT_MAX}'),
         ]
     )
 

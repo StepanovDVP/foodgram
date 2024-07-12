@@ -57,8 +57,8 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'backend.wsgi.application'
 
-USE_SQLITE = os.getenv('USE_SQLITE', 'False') == 'True'
-
+# USE_SQLITE = os.getenv('USE_SQLITE', 'False') == 'True'
+USE_SQLITE = True
 if USE_SQLITE:
     DATABASES = {
         'default': {

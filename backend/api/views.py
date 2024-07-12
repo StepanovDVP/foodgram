@@ -2,6 +2,7 @@ import short_url
 from django.contrib.auth import get_user_model
 from django.db.models import (BooleanField, Exists, OuterRef, Prefetch, Sum,
                               Value)
+from rest_framework.pagination import PageNumberPagination
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -156,6 +157,11 @@ class UserActionsMixin:
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class CustomPageNumberPagination(PageNumberPagination):
+    page_size_query_param = 'limit'
+    page_size = 10
+
+
 class RecipeViewSet(UserActionsMixin, viewsets.ModelViewSet):
     """Создание и редактирвоание рецептов."""
 
@@ -164,7 +170,7 @@ class RecipeViewSet(UserActionsMixin, viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_class = RecipeFilter
     ordering = ['-created_at']
-    pagination_class = LimitOffsetPagination
+    pagination_class = CustomPageNumberPagination
 
     def get_serializer_class(self):
         if self.action in ('list', 'retrieve'):

@@ -120,11 +120,13 @@ class RecipeIngredient(models.Model):
         validators=[
             MinValueValidator(
                 INGREDIENT_AMOUNT_MIN,
-                message=f'минимально допустимое значение {INGREDIENT_AMOUNT_MIN}'
+                message=f'минимально допустимое значение '
+                        f'{INGREDIENT_AMOUNT_MIN}'
             ),
             MaxValueValidator(
                 INGREDIENT_AMOUNT_MAX,
-                message=f'максимально допустимое значение {INGREDIENT_AMOUNT_MAX}'),
+                message=f'максимально допустимое значение '
+                        f'{INGREDIENT_AMOUNT_MAX}'),
         ]
     )
 
